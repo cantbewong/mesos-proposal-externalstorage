@@ -4,6 +4,28 @@
 
 ---
 
+# Executive Summary
+
+Pursue a Phased approach 
+  
+1. Start Today:
+    - assume an existing external storage platform has been deployed
+    - consume volume sfrom it
+2. Tommorow:
+    - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS 
+
+---
+
+Implement an abstration for
+
+Volume: create/remove/mount/unmount
+
+Goal - abstraction works for:
+    - RexRay using external storage
+    - Docker Volume API for thos workloads that run in a Docker container
+
+---
+
 # Background
 ## How Mesos works now
 
@@ -159,29 +181,43 @@ In the example of a 750GB and two 500GB volumes, suppose a Framework requires an
 ---
  
 ## Additional issue with reporting capacity in units of volumes
+
 Has similar issue to the MB capacity pool
+
 - Do you report the volume on ALL slaves?, OR
 - just one that is arbitrarily chosen? 
 
 ---
 
 ## Summary of Options
-1. Operator (admin) designates a pool of external storage. For example 1,000 TB. The resource pool consistes of this storage, to be "carved" into volumes at the time a Framework accepts an offer in the form of a RESERVE.
-2. Operator (admin) precomposes a collection of volumes. The resource pool consists of this assortment of volumes.
+1. Operator (admin) precomposes a collection of volumes. The resource pool consists of this assortment of volumes. OR
+2. Operator (admin) designates a pool of external storage. For example 1,000 TB. The resource pool consistes of this storage, to be "carved" into volumes at the time a Framework accepts an offer in the form of a RESERVE.
 
+Note: Initial implementation with asume pre-deployed storage, and could even assume pre-provisioned volumes. Maybe just tell mesos what volumes have been pre-provisioned, without implementing an operator API to do volume provisioning
+
+
+## Attribute Options
+
+Assume storage connectivity constraints are defines as slave attributes
+
+1. Have a user declare constraints in Marathon. OR
+2. Have Mesos manage this automatically in the allocation logic, with no Marathon configuration required
 ---
 
 ## Creating a volume
+
 Whether done in advance, or at time of RESERVE, this is required:
-- a "tuple" indicating the source of the storage
-  - provider-type
-  - provider-instance
-  - provider-pool
-- volume size in MB
-- filesystem (e.g. ext4) to be used for formatting
-- a mount point on the slave
-- optional: a source volume (this volume will be a snapshot)
-- optional: access mode (RW, RO, default is RW)
+
+1. a "tuple" indicating the source of the storage
+    - provider-type
+    - provider-instance
+    - provider-pool
+2. volume size in MB
+3. filesystem (e.g. ext4) to be used for formatting
+4. a mount point on the slave 
+    - It might be better to relieve the operator of this specification by auto- generating a unique mount point 
+5. optional: a source volume (this volume will be a snapshot)
+6. optional: access mode (RW, RO, default is RW)
 
 ---
 
@@ -192,7 +228,7 @@ Whether done in advance, or at time of RESERVE, this is required:
 
 ---
 
-##TBD: How where to perform volume format.  Options:
+##TBD: Where to perform volume format.  Options:
 1. Imbedded in isolator?
     - don't think isolator is invoked at Reserve time so this may not be feasible
 2. Dispatch a Task to do this using Marathon
@@ -307,33 +343,6 @@ If we go the way of pre-composed volumes, an IOP evaluation (placement decision)
 
 ---
 
-
-
-clintonskitson [11:40 AM]
-possibly the slide should call out the full storage platform lifecycle management where the slave may have double duty of grabbing persistent disk for SIO to consume and also map/unmap volumes at that point.. that config could translate into a hyper-converged mesos slave or simply an SIO cluster that is managed by a framework on dedicated hardware
-
-clintonskitson [11:42 AM]11:42
-I'm actually thinking that for oganizational purposes you make your proposal in pure markdown for viewing github style.. the deck can be something separate that summarizes some of the important stuff
-
-clintonskitson [11:42 AM]
-it just seems too flat in terms of organization where context could help the reader
-
-maybe in the summary of options .. an option re resource constraint should be to include nothing at all? or add the idea of having the SIO platform show up as a constraint which then would be managed by the resource allocator as part of the allocation policy?  shoving the logic from the framework on choice down a level to let mesos handle it
-
-clintonskitson [12:10 PM]
-volume lifycycle workflow - maybe the first option is the non-storage platform lifecycle management approach.. ie just tell mesos what the volume name/identifier is that has already been created outside of mesos
-
-clintonskitson [12:12 PM]
-RR CLI - btw you can create a volume from a volume in rr (create --volumeid).. under the covers this does the snap for you and is handled via the storage driver differently on different platforms.. "new-snapshot used.." --volumeid used if
-
-clintonskitson [12:16 PM]
-having operators declare mount points on the slave may be problematic as that should really a tracked uniqueness value.. ie a job can be dispatched to a host that already has something mounted at that path?
-
 clintonskitson [12:18 PM]
 categorizing efforts 1) mesos + docker (volume drivers) + marathon 2) mesos external storage + any framework 3) mesos storage profiles 4) mesos framework for storage platform lifecycle management 5) mesos external storage + docker (volume drivers)
 
-clintonskitson [12:22 PM]
-re #5.. the notion here is that Docker now has a Volume API, so the semantics that are being requested of RR can also be requested directly from Docker (but in different calls of course).. but this presents a thought process around abstraction at this point which will be important in the design
-
-clintonskitson [12:26 PM]
-maybe a paragraph at the beginning which summarizes what phase1/phase2 are going to complete for the lazy minded
