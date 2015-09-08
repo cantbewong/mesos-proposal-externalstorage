@@ -202,6 +202,7 @@ Has similar issue to the MB capacity pool
 
 Note: Initial implementation with assume pre-deployed storage, and could even assume pre-provisioned volumes. Maybe just tell mesos what volumes have been pre-provisioned, without implementing an operator API to do volume provisioning
 
+---
 
 ## Attribute Options
 
@@ -209,6 +210,7 @@ Assume storage connectivity constraints are defines as slave attributes
 
 1. Have a user declare constraints in Marathon. OR
 2. Have Mesos manage this automatically in the allocation logic, with no Marathon configuration required
+
 ---
 
 ## Creating a volume
