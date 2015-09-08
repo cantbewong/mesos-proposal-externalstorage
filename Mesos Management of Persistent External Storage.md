@@ -4,15 +4,33 @@
 
 ---
 
+## Table of Contents
+
+
+
 # Executive Summary
 
 Pursue a Phased approach 
   
 1. Start Today:
     - assume an existing external storage platform has been deployed
+    - create volumes (if needed for platform)
     - consume volumes from it
 2. Tomorrow:
+    - persistent external disk reservations
     - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS 
+3. For Discussion:
+    - How should external capacity be advertised? Should it be advertised at all in phase 1.
+
+---
+
+## Categorizing effort into implementation stages
+
+1. Get Mesos + Docker (volume drivers) + marathon working
+2. Get Mesos + external storage + any framework working (this is like #1 for Frameworks that don't use Docker containers)  
+3. Support Mesos managed storage profiles - Do not assume pre-configured storage volumes, have Mesos manage volume creation on appropriate storage 
+4. Mesos framework for storage platform lifecycle management - Distributed software defined storage platforms, like ScaleIo, are deployed by Mesos on slave nodes.
+5. Mesos *external* storage + Docker (volume drivers)
 
 ---
 
@@ -119,6 +137,11 @@ This would allow a task associated with a persistent volume to be restarted on *
 
 ## Useful proposed Mesos Feature
 [Mesos177](https://issues.apache.org/jira/browse/MESOS-1777) describes a future implementation of a facility that would allow a Framework to dynamically add new slave attributes at task launch time. Assuming we build a ScaleIo Framework in a later phase, this could be used as part of a facility to automate association of slaves to ScaleIo storage pools.
+
+---
+
+## Alternate to Marathon + attributes for placement decisions:
+If the allocator was extended to consider attributes automatically in offer composition, this could eliminate the management burden of configuration of attribute based restrictions.
 
 ---
 
@@ -341,16 +364,6 @@ Result should be:
   - Accept and RESERVE from the pool-B offer, consuming 500TB and 900IOPS
 
 If we go the way of pre-composed volumes, an IOP evaluation (placement decision) should take place during the composition process.
-
----
-
-## Categorizing effort into implementation stages
-
-1. Get Mesos + Docker (volume drivers) + marathon working
-2. Get Mesos + external storage + any framework working (this is like #1 for Frameworks that don't use Docker containers)  
-3. Support Mesos managed storage profiles - Do not assume pre-configured storage volumes, have Mesos manage volume creation on appropriate storage 
-4. Mesos framework for storage platform lifecycle management - Distributed software defined storage platforms, like ScaleIo, are deployed by Mesos on slave nodes.
-5. Mesos *external* storage + Docker (volume drivers)
 
 ---
 
