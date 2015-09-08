@@ -35,13 +35,14 @@ Goal - abstraction works for:
 - Slaves offer resources (including storage) to the Master
 - Slaves advertise their capabilities with a combination of
 *resources* + *attributes*. 
-- Resources and attributes are offered to Frameworks as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage 
+- The Master's Allocator module maintains a model of system wide resources.
+- Resources and attributes are offered to Frameworks (by the Allocator) as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage 
  
 ---
  
 ## Distinction between Resources and Attributes
-- Mesos tracks consumption of resources by Frameworks, and decrements subsequent resource offers while the resource is in use. 
-- Attributes are not considered consumed by a running task, so they are not "usage constrained" or tracked by the Mesos Master - they are always offered to Frameworks. Attributes are commonly used to guide placement by Marathon.
+- the Allocator tracks consumption of resources by Frameworks, and decrements subsequent resource offers while the resource is in use. 
+- Attributes are not considered consumed by a running task, so they are not "usage constrained" or tracked by the Allocator - they are always simply passed though in offers to Frameworks. Attributes are commonly used to guide placement by Marathon.
 
 It might make sense for a read-only volume to be advertised as an attribute, if the storage provider can safely expose this to multiple slaves concurrently. For normal read-write volumes, some facility must track consumption by a task, so resource is the proper advertisement, not attribute
 
@@ -364,10 +365,10 @@ If we go the way of pre-composed volumes, an IOP evaluation (placement decision)
 # Appendix
  kubernetes has handling for persistent volumes, including block devices. I may be worthwhile to examine this for ideas.
  [https://github.com/kubernetes/kubernetes/blob/master/docs/design/persistent-storage.md]()
- Kubernetes states use case is management of:
+ Kubernetes target use case is management of:
  
      - GCE persistent disks
      - NFS shares
      - AWS EBS stores
 
-The current facility assumes the storage is pre-provisioned, outside kubernetes
+The current facility assumes the storage is pre-provisioned, outside kubernetes.
