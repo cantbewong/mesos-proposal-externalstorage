@@ -10,19 +10,19 @@ Pursue a Phased approach
   
 1. Start Today:
     - assume an existing external storage platform has been deployed
-    - consume volume sfrom it
-2. Tommorow:
+    - consume volumes from it
+2. Tomorrow:
     - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS 
 
 ---
 
-Implement an abstration for
+Implement an abstraction for
 
 Volume: create/remove/mount/unmount
 
 Goal - abstraction works for:
     - RexRay using external storage
-    - Docker Volume API for thos workloads that run in a Docker container
+    - Docker Volume API for those workloads that run in a Docker container
 
 ---
 
@@ -35,7 +35,7 @@ Goal - abstraction works for:
 - Slaves offer resources (including storage) to the Master
 - Slaves advertise their capabilities with a combination of
 *resources* + *attributes*. 
-- Resources and  attributes are offered to Frameworks as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage 
+- Resources and attributes are offered to Frameworks as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage 
  
 ---
  
@@ -117,7 +117,7 @@ This would allow a task associated with a persistent volume to be restarted on *
 ---
 
 ## Useful proposed Mesos Feature
-[Mesos177](https://issues.apache.org/jira/browse/MESOS-1777) describes a future implemention of a facility that would allow a Framework to dynamically add new slave attributes at task launch time. Assuming we build a ScaleIo Framework in a later phase, this could be used as part of a facility to automate association of slaves to ScaleIo storage pools.
+[Mesos177](https://issues.apache.org/jira/browse/MESOS-1777) describes a future implementation of a facility that would allow a Framework to dynamically add new slave attributes at task launch time. Assuming we build a ScaleIo Framework in a later phase, this could be used as part of a facility to automate association of slaves to ScaleIo storage pools.
 
 ---
 
@@ -131,7 +131,13 @@ The "straw man" proposal to report a capacity on each connectable slave has some
 ---
 
 ## Demonstration of the difficulty with reporting a shared pool's capacity at the slave level
-Suppose the Mesos operator chooses to allow a total pool of 1,000 TB to be utilized by a Mesos Cluster. For simplicity assume 2 slaves have connectivity to this pool. Assume a Framework wants to consume (reserve) a 750TB external persistent volume, if it is presented with an offer.
+Suppose the Mesos operator chooses to allow a total pool of 1,000 TB to be utilized by a Mesos Cluster. 
+
+For simplicity assume 2 slaves have connectivity to this pool. 
+
+Assume a Framework wants to consume (reserve) a 750TB external persistent volume, if it is presented with an offer.
+
+discussion of alternatives based on this scenario...
 
 ---
 
@@ -176,7 +182,7 @@ The slave report a 750GB resource and two 500GB resources
 ## Demonstration of difficulty with reporting remote persistent disk in units of volumes
 Assume you compose small, medium and large volumes. Whenever the off-the-shelve volume isn't the perfect size, the task must "round up" resulting in waste
 
-In the example of a 750GB and two 500GB volumes, suppose a Framework requires an 800GB volume and four 100GB volumes. Even though this should fit within the total pool, the result will be two failed requests and a lot of wasted storage on the 3 succesful requests
+In the example of a 750GB and two 500GB volumes, suppose a Framework requires an 800GB volume and four 100GB volumes. Even though this should fit within the total pool, the result will be two failed requests and a lot of wasted storage on the 3 successful requests
 
 ---
  
@@ -191,9 +197,9 @@ Has similar issue to the MB capacity pool
 
 ## Summary of Options
 1. Operator (admin) precomposes a collection of volumes. The resource pool consists of this assortment of volumes. OR
-2. Operator (admin) designates a pool of external storage. For example 1,000 TB. The resource pool consistes of this storage, to be "carved" into volumes at the time a Framework accepts an offer in the form of a RESERVE.
+2. Operator (admin) designates a pool of external storage. For example 1,000 TB. The resource pool consists of this storage, to be "carved" into volumes at the time a Framework accepts an offer in the form of a RESERVE.
 
-Note: Initial implementation with asume pre-deployed storage, and could even assume pre-provisioned volumes. Maybe just tell mesos what volumes have been pre-provisioned, without implementing an operator API to do volume provisioning
+Note: Initial implementation with assume pre-deployed storage, and could even assume pre-provisioned volumes. Maybe just tell mesos what volumes have been pre-provisioned, without implementing an operator API to do volume provisioning
 
 
 ## Attribute Options
@@ -258,19 +264,20 @@ Assume volume will be attached only during format, and while an associated  task
 
  TaskInfo links to Resources
 
- DiskInfo incorporate a slave mount path, a container mount path amd a RW/RO flag. DiskInfo looks like a suitable place to record remote persistent volume metadata. I believe there is already a Mesos ID here, and that this is retained persistently by Mesos.
+ DiskInfo incorporate a slave mount path, a container mount path and a RW/RO flag. DiskInfo looks like a suitable place to record remote persistent volume metadata. I believe there is already a Mesos ID here, and that this is retained persistently by Mesos.
 
  The Mesos ID might be sufficient if we maintain a "database" that maps the ID to storage-provider, provider instance and volume-id. 
  
  ---
  
 ## Proposed Mesos extension
- It would be great to avoid maintaining an external storge provider database. I propose adding these to the Mesos DiskInfo:
- - external provider type
- - external provider instance ID
- - external provider volume ID
- - (optional) external provider pool ID. This is optional because providers can likely deduce this via API, if instance and volume IDs are available
- - (optional) Do we want to record a file system type?, or can this be deduced by examination
+ We'd like to avoid maintaining an external storage provider database. I propose adding these to the Mesos DiskInfo:
+ 
+    - external provider type
+    - external provider instance ID
+    - external provider volume ID
+    - (optional) external provider pool ID. This is optional because providers can likely deduce this via API, if instance and volume IDs are available
+    - (optional) Do we want to record a file system type?, or can this be deduced by examination
 
 ---
 
@@ -290,25 +297,26 @@ Determine Resource advertisement philosophy:
 
 # Phase 2+ considerations that should influence architecture
 Treating resource management as only a capacity issue is short sighted
-- External storage consumes network bandwidth - even if slave has a dedicated storage network, bandwidth is a finite resource
-- External storage has an finite IOPS per pool
+
+    - External storage consumes network bandwidth - even if slave has a dedicated storage network, bandwidth is a finite resource
+    - External storage has an finite IOPS per pool
 
 If Mesos really intends to claim to *manage* external persistent storage, taking on bandwidth and IOPs is mandatory, though it might be deferred to a later release.
 
 ---
 
 ## To be discussed: Could limiting mounts per slave be a "poor man's" replacement for limiting bandwidth and IOPs?
-- instead of managing bandwidth and IOPs, we could mange connections (mounts) per slave
-- or should be do this *in addition to* storage bandwidth and IOPs
+- Instead of managing bandwidth and IOPs, we could mange connections (mounts) per slave
+- OR should be do this *in addition to* storage bandwidth and IOPs
 
 ---
 
 ## Storage bandwidth as a managed resource
-- bandwidth is associated with a specific slave, so this is *not* tied to a persistent storage volume reservation
+Bandwidth is associated with a specific slave, so this is *not* tied to a persistent storage volume reservation
 
-Thus slaves should advertise storage bandwidth, and task dispatch should consume it
+thus slaves should advertise storage bandwidth, and task dispatch should consume it
 
-Units? If goal is to simply achieve balanced task distribution (i.e. not all external storage using tasks crowd onto the same slave) arbitrary units would be OK
+Units? If goal is to simply achieve balanced task distribution (i.e. avoid placements that crowd external storage using tasks onto the same slave), arbitrary units would be OK
 
 ---
 
@@ -333,16 +341,33 @@ If we go the way of pre-composed volumes, an IOP evaluation (placement decision)
 
 ---
 
-## Deliverables
-1. binary that allocates a volume and formats it
-  - runs at volume definition time, or RESERVE time (TBD which time)
-  - tentative plan: use RexRay CLI
-2. binary that mounts a pre-existing volume on a slave for use by a containerized task
-  - tentative assumption: this will run in a Mesos isolator at task start time.
-  - plan: call out to RexRay CLI
+## Categorizing effort into implementation stages
+
+1. Get Mesos + Docker (volume drivers) + marathon working
+2. Get Mesos + external storage + any framework working (this is like #1 for Frameworks that don't use Docker containers)  
+3. Support Mesos managed storage profiles - Do not assume pre-configured storage volumes, have Mesos manage volume creation on appropriate storage 
+4. Mesos framework for storage platform lifecycle management - Distributed software defined storage platforms, like ScaleIo, are deployed by Mesos on slave nodes.
+5. Mesos *external* storage + Docker (volume drivers)
 
 ---
 
-clintonskitson [12:18 PM]
-categorizing efforts 1) mesos + docker (volume drivers) + marathon 2) mesos external storage + any framework 3) mesos storage profiles 4) mesos framework for storage platform lifecycle management 5) mesos external storage + docker (volume drivers)
+## Deliverables
+1. binary that allocates a volume and formats it
+    - runs at volume definition time, or RESERVE time (TBD which time)
+    - tentative plan: use RexRay CLI
+2. binary that mounts a pre-existing volume on a slave for use by a containerized task
+    - tentative assumption: this will run in a Mesos isolator at task start time.
+    - plan: call out to RexRay CLI
+ 
+ ---
+ 
+# Appendix
+ kubernetes has handling for persistent volumes, including block devices. I may be worthwhile to examine this for ideas.
+ [https://github.com/kubernetes/kubernetes/blob/master/docs/design/persistent-storage.md]()
+ Kubernetes states use case is management of:
+ 
+     - GCE persistent disks
+     - NFS shares
+     - AWS EBS stores
 
+The current facility assumes the storage is pre-provisioned, outside kubernetes
