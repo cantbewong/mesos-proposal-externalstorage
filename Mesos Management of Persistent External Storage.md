@@ -5,20 +5,47 @@
 ---
 
 ## Table of Contents
+<!-- TOC depth:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
+- [Executive Summary](#executive-summary)
+	- [Categorizing effort into implementation stages](#categorizing-effort-into-implementation-stages)
+- [Background](#background)
+	- [How Mesos works now](#how-mesos-works-now)
+	- [Slaves (aka Agents)](#slaves-aka-agents)
+	- [Distinction between Resources and Attributes](#distinction-between-resources-and-attributes)
+	- [Resource Reservations](#resource-reservations)
+- [Phase 1 proposal](#phase-1-proposal)
+	- [Slaves must be pre-configured](#slaves-must-be-pre-configured)
+	- [Use of ATTRIBUTES to indicate connectable storage "tuples" should work nicely with Marathon](#use-of-attributes-to-indicate-connectable-storage-tuples-should-work-nicely-with-marathon)
+	- [Alternate to Marathon + attributes for placement decisions:](#alternate-to-marathon-attributes-for-placement-decisions)
+	- [For Discussion: How should external storage capacity be advertised?](#for-discussion-how-should-external-storage-capacity-be-advertised)
+	- [Demonstration of the difficulty with reporting a shared pool's capacity at the slave level](#demonstration-of-the-difficulty-with-reporting-a-shared-pools-capacity-at-the-slave-level)
+	- [For Discussion: Do we even want to advertise a pool capacity, with dynamic volume creation from the pool?](#for-discussion-do-we-even-want-to-advertise-a-pool-capacity-with-dynamic-volume-creation-from-the-pool)
+	- [Summary of Options](#summary-of-options)
+	- [Attribute Options](#attribute-options)
+	- [Creating a volume](#creating-a-volume)
+	- [Volume lifecycle workflow](#volume-lifecycle-workflow)
+	- [TBD: Where to perform volume format.  Options:](#tbd-where-to-perform-volume-format-options)
+- [Project Steps](#project-steps)
+	- [Open Issues - impacts design and should be resolved ASAP](#open-issues-impacts-design-and-should-be-resolved-asap)
+- [Phase 2+ considerations that should influence architecture](#phase-2-considerations-that-should-influence-architecture)
+	- [Deliverables](#deliverables)
+- [Appendix](#appendix)
+<!-- /TOC -->
 
+---
 
 # Executive Summary
 
-Pursue a Phased approach 
-  
+Pursue a Phased approach
+
 1. Start Today:
     - assume an existing external storage platform has been deployed
     - create volumes (if needed for platform)
     - consume volumes from it
 2. Tomorrow:
     - persistent external disk reservations
-    - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS 
+    - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS
 3. For Discussion:
     - How should external capacity be advertised? Should it be advertised at all in phase 1.
 
@@ -28,7 +55,7 @@ Pursue a Phased approach
 
 1. Get Mesos + Docker (volume drivers) + marathon working
 2. Get Mesos + external storage + any framework working (this is like #1 for Frameworks that don't use Docker containers)  
-3. Support Mesos managed storage profiles - Do not assume pre-configured storage volumes, have Mesos manage volume creation on appropriate storage 
+3. Support Mesos managed storage profiles - Do not assume pre-configured storage volumes, have Mesos manage volume creation on appropriate storage
 4. Mesos framework for storage platform lifecycle management - Distributed software defined storage platforms, like ScaleIo, are deployed by Mesos on slave nodes.
 5. Mesos *external* storage + Docker (volume drivers)
 
@@ -52,14 +79,14 @@ Goal - abstraction works for:
 ## Slaves (aka Agents)
 - Slaves offer resources (including storage) to the Master
 - Slaves advertise their capabilities with a combination of
-*resources* + *attributes*. 
+*resources* + *attributes*.
 - The Master's Allocator module maintains a model of system wide resources.
-- Resources and attributes are offered to Frameworks (by the Allocator) as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage 
- 
+- Resources and attributes are offered to Frameworks (by the Allocator) as  vectors (tuples). For example resources available on a slave node might include cpu+mem+storage
+
 ---
- 
+
 ## Distinction between Resources and Attributes
-- the Allocator tracks consumption of resources by Frameworks, and decrements subsequent resource offers while the resource is in use. 
+- the Allocator tracks consumption of resources by Frameworks, and decrements subsequent resource offers while the resource is in use.
 - Attributes are not considered consumed by a running task, so they are not "usage constrained" or tracked by the Allocator - they are always simply passed though in offers to Frameworks. Attributes are commonly used to guide placement by Marathon.
 
 It might make sense for a read-only volume to be advertised as an attribute, if the storage provider can safely expose this to multiple slaves concurrently. For normal read-write volumes, some facility must track consumption by a task, so resource is the proper advertisement, not attribute
@@ -68,11 +95,11 @@ It might make sense for a read-only volume to be advertised as an attribute, if 
 
 ## Resource Reservations
 ### Static Reservation
- A resource can be explicitly earmarked with a role in a slave's configuration. 
+ A resource can be explicitly earmarked with a role in a slave's configuration.
    `--resources="cpus(ads):8;mem(ads):4096"`
-   
- This has the effect of restricting consumption of the resource to particular framework or usage. 
- 
+
+ This has the effect of restricting consumption of the resource to particular framework or usage.
+
  This is known as a *static reservation*. A static reservation can only be changed by restarting the slave.
 
 ---
@@ -84,7 +111,7 @@ It might make sense for a read-only volume to be advertised as an attribute, if 
 - A framework responds to the offer with a "Reserve" response, which includes a role designation in the response
 
 ---
- 
+
 ## Dynamic reservation for Persistent storage
   - The Reserve response does not have to include all the elements of the offer vector.
     - For example the offer could be (cpu+memory+storage), but the Reserve response could be just storage
@@ -155,9 +182,9 @@ The "straw man" proposal to report a capacity on each connectable slave has some
 ---
 
 ## Demonstration of the difficulty with reporting a shared pool's capacity at the slave level
-Suppose the Mesos operator chooses to allow a total pool of 1,000 TB to be utilized by a Mesos Cluster. 
+Suppose the Mesos operator chooses to allow a total pool of 1,000 TB to be utilized by a Mesos Cluster.
 
-For simplicity assume 2 slaves have connectivity to this pool. 
+For simplicity assume 2 slaves have connectivity to this pool.
 
 Assume a Framework wants to consume (reserve) a 750TB external persistent volume, if it is presented with an offer.
 
@@ -170,7 +197,7 @@ discussion of alternatives based on this scenario...
 `RESOURCES="...;ext-storage-inst1:1000000000"`
 `RESOURCES="...;ext-storage-inst1:1000000000"`
 
-If each slave advertises the 1,000TB the aggregate is inflated by 2x. Although actual offer vectors (cpu+mem+storage) will not report an impossible to achieve tuple. 
+If each slave advertises the 1,000TB the aggregate is inflated by 2x. Although actual offer vectors (cpu+mem+storage) will not report an impossible to achieve tuple.
 
 After the Framework reserves 750 TB, vectors from *both* slaves need to be reduced by 750 TB. This will require a change to Mesos?
 
@@ -209,13 +236,13 @@ Assume you compose small, medium and large volumes. Whenever the off-the-shelve 
 In the example of a 750GB and two 500GB volumes, suppose a Framework requires an 800GB volume and four 100GB volumes. Even though this should fit within the total pool, the result will be two failed requests and a lot of wasted storage on the 3 successful requests
 
 ---
- 
+
 ## Additional issue with reporting capacity in units of volumes
 
 Has similar issue to the MB capacity pool
 
 - Do you report the volume on ALL slaves?, OR
-- just one that is arbitrarily chosen? 
+- just one that is arbitrarily chosen?
 
 ---
 
@@ -246,8 +273,8 @@ Whether done in advance, or at time of RESERVE, this is required:
     - provider-pool
 2. volume size in MB
 3. filesystem (e.g. ext4) to be used for formatting
-4. a mount point on the slave 
-    - It might be better to relieve the operator of this specification by auto- generating a unique mount point 
+4. a mount point on the slave
+    - It might be better to relieve the operator of this specification by auto- generating a unique mount point
 5. optional: a source volume (this volume will be a snapshot)
 6. optional: access mode (RW, RO, default is RW)
 
@@ -264,7 +291,7 @@ Whether done in advance, or at time of RESERVE, this is required:
 1. Imbedded in isolator?
     - don't think isolator is invoked at Reserve time so this may not be feasible
 2. Dispatch a Task to do this using Marathon
-    - If we do this during a Reserve, what are expectations for timeliness? format can take a long time. Is RESERVE a synchronous operation expecting a rapid response? 
+    - If we do this during a Reserve, what are expectations for timeliness? format can take a long time. Is RESERVE a synchronous operation expecting a rapid response?
 3. Utilize an "out-of-Mesos" host to perform formatting
 
 ---
@@ -292,13 +319,13 @@ Assume volume will be attached only during format, and while an associated  task
 
  DiskInfo incorporate a slave mount path, a container mount path and a RW/RO flag. DiskInfo looks like a suitable place to record remote persistent volume metadata. I believe there is already a Mesos ID here, and that this is retained persistently by Mesos.
 
- The Mesos ID might be sufficient if we maintain a "database" that maps the ID to storage-provider, provider instance and volume-id. 
- 
+ The Mesos ID might be sufficient if we maintain a "database" that maps the ID to storage-provider, provider instance and volume-id.
+
  ---
- 
+
 ## Proposed Mesos extension
  We'd like to avoid maintaining an external storage provider database. I propose adding these to the Mesos DiskInfo:
- 
+
     - external provider type
     - external provider instance ID
     - external provider volume ID
@@ -374,14 +401,14 @@ If we go the way of pre-composed volumes, an IOP evaluation (placement decision)
 2. binary that mounts a pre-existing volume on a slave for use by a containerized task
     - tentative assumption: this will run in a Mesos isolator at task start time.
     - plan: call out to RexRay CLI
- 
+
  ---
- 
+
 # Appendix
  kubernetes has handling for persistent volumes, including block devices. I may be worthwhile to examine this for ideas.
  [https://github.com/kubernetes/kubernetes/blob/master/docs/design/persistent-storage.md]()
  Kubernetes target use case is management of:
- 
+
      - GCE persistent disks
      - NFS shares
      - AWS EBS stores
