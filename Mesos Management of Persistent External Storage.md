@@ -24,6 +24,7 @@
 	- [Creating a volume](#creating-a-volume)
 	- [Volume lifecycle workflow](#volume-lifecycle-workflow)
 	- [TBD: Where to perform volume format.  Options:](#tbd-where-to-perform-volume-format-options)
+	- [Volume mount/unmount management](#volume-mount-unmount-management)
 - [Project Steps](#project-steps)
 	- [Open Issues - impacts design and should be resolved ASAP](#open-issues-impacts-design-and-should-be-resolved-asap)
 - [Phase 2+ considerations that should influence architecture](#phase-2-considerations-that-should-influence-architecture)
@@ -237,12 +238,22 @@ Whether done in advance, or at time of RESERVE, this is required:
   - The step of formatting the volume will be done on an arbitrary slave which has been associated with the provider
     - We want the format to take place at volume create time because it is time consuming and we want to avoid startup latency when tasks are dispatched. Need to determine how and where we can trigger format code.
 
-##TBD: Where to perform volume format.  Options:
+## TBD: Where to perform volume format.  Options:
 1. Imbedded in isolator?
     - don't think isolator is invoked at Reserve time so this may not be feasible
 2. Dispatch a Task to do this using Marathon
     - If we do this during a Reserve, what are expectations for timeliness? format can take a long time. Is RESERVE a synchronous operation expecting a rapid response?
 3. Utilize an "out-of-Mesos" host to perform formatting
+
+## Volume mount / unmount management
+
+Unless the reservation process ties an external volume to a particular slave, it is best to defer mount until a task using the mount is scheduled.
+
+If a slave becomes detached, of a task crashes, many storage providers will refuse to remount the volume to a different slave until the old mount is detached. We need to consider the best workflow for detach:
+
+    - Should we automatically detach when a tack ends? Probably yes, if mount/remount cost is low - and it usually is low.
+    - How do we handle slave detach? Probably leave mount attached - should discuss. Does this tie into slave checkpoint and recover options?
+    - Where (what module) is detach code triggered an run? Master, Framework, or Slave?
 
 ### RexRay CLI will be utilized
 new-volume
