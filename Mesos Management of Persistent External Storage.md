@@ -91,6 +91,23 @@ It might make sense for a read-only volume to be advertised as an attribute, if 
 
   Dynamic reservations will mandatory for external persistent storage
 
+## Oversubscription will be unsupported
+Many services are provisioned for peak, not average load.
+    - result: provisioned resources are under-utilized
+
+Over-subscription attempts to marshall these underutilized resources to offer a best efforts class of service
+
+    - To implement this, The Master Allocator module tracks oversubscribed resources separately from regular resources
+        - A resource Monitor running on each slave gathers usage metrics
+    - Use of over-subscription is recommended only with "compressible" resources like cpu and bandwidth
+
+Because use with storage is not recommended, we do not plan to address over-subscription related to persistent external storage. However observe "Thin provisioned" storage is similar in some ways and different in others:
+
+    - similar: you do want to monitor thin provisioned storage actual usage in relation to real capacity
+    - different: Revoking storage is not a viable option
+
+ Conclusion: We will deem over-subscription of external storage as unsupported, and monitoring of thin provisioned external storage as something to be managed and monitored outside Mesos.
+ 
 # Phase 1 proposal
 
 ### This is an "straw man" proposal that needs further discussion and evaluation
