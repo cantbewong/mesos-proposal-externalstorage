@@ -6,6 +6,7 @@
 <!-- TOC depth:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
 - [Executive Summary](#executive-summary)
+- [Agenda: Issues to DIscuss](#agenda-issues-to-discuss)
 	- [Categorizing effort into implementation stages](#categorizing-effort-into-implementation-stages)
 - [Background](#background)
 	- [How Mesos works now](#how-mesos-works-now)
@@ -44,8 +45,50 @@ Pursue a Phased approach
 2. Tomorrow:
     - persistent external disk reservations
     - compose a storage platform that is provisioned by mesos and runs on Mesos slaves using direct attached storage DAS
-3. For Discussion:
-    - How should external capacity be advertised? Should it be advertised at all in phase 1.
+ 
+# Agenda: Issues to Discuss
+
+How should external capacity be advertised?
+
+    - each volume a resource advertised by a single slave?
+    - each volume by all slaves? revokable after 1st reservation?
+    - Should it be advertised at all in phase 1?
+    - Should a pool capacity be advertised, with smaller volumes "carved" from pool by reservations?
+
+When do we mount/dismount volumes?
+
+    - Aligned with reservation create/destroy?
+        - Are we bothered that reservation locks volume to a slave?
+    - Aligned with first task dispatch/ reservation destroy?
+    - Aligned with each task dispatch / task terminate?
+        - How do we handle slave / task abnormal terminations, network isolation?
+  
+  When do we format a volume?
+  
+      - reservation time?
+      - first task schedule time?
+
+How do we police network volume mounts? 
+
+    - When tasks / slave abnormally terminate or network isolation occurs:
+        - How do we detect orphaned mounts?  
+        - What do we do about them if we find them? and When?
+ 
+  Where do we host an external storage management implementation?
+  
+      - Where is abstraction interface located? Where is implementation binary hosted? Consider these (could be some or all):
+          - Anonymous Module
+          - new Storage Management Framework
+          - In Isolators
+   
+What/Where is "ultimate source of truth" regarding existence, mount state of external persistent volumes?
+
+    - Mesos "call outs" through abstraction layer to an external storage management implementation?
+    - Something else?
+
+Is policy based mapping of Tasks to storage volumes on the long term agenda?
+
+How do we handle storage network connection constraints? (failure domain constraints are likely a similar issue) 
 
 ## Categorizing effort into implementation stages
 
@@ -349,10 +392,17 @@ Goal - abstraction works for:
 2. binary that mounts a pre-existing volume on a slave for use by a containerized task
     - tentative assumption: this will run in a Mesos isolator at task start time.
     - plan: call out to RexRay CLI
+3. A query API that reports volume inventory and status (mounted/unmounted)
+    - The external storage management layer should be the source of truth as to volume existence and status
 
+## Proposal: Implement an external storage manager as a Mesos anonymous module
+ 
+ This will handle volume create, format, mount, unmount destroy
  ---
 
 # Appendix
+ Discuss build process if time allows
+ 
  kubernetes has handling for persistent volumes, including block devices. I may be worthwhile to examine this for ideas.
  [https://github.com/kubernetes/kubernetes/blob/master/docs/design/persistent-storage.md]()
  Kubernetes target use case is management of:
