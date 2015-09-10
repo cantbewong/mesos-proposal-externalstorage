@@ -188,7 +188,9 @@ This would allow a task associated with a persistent volume to be restarted on *
 [Mesos177](https://issues.apache.org/jira/browse/MESOS-1777) describes a future implementation of a facility that would allow a Framework to dynamically add new slave attributes at task launch time. Assuming we build a ScaleIo Framework in a later phase, this could be used as part of a facility to automate association of slaves to ScaleIo storage pools.
 
 ## Alternate to Marathon + attributes for placement decisions:
-If the allocator was extended to consider attributes automatically in offer composition, this could eliminate the management burden of configuration of attribute based restrictions.
+If the allocator was extended to consider attributes automatically in offer composition, this could eliminate the management burden of configuration of attribute based restrictions. 
+
+    - Offers to frameworks would be automatically filtered based on attributes.
 
 ## For Discussion: How should external storage capacity be advertised?
 Mesos currently expects slaves to provide resources, and thus implements a slave centric model for reporting available resources to the Mesos Master.
